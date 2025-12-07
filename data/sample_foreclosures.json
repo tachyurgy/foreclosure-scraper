@@ -1,0 +1,212 @@
+[
+  {
+    "case_number": "2024CP4601055",
+    "case_type": "Foreclosure",
+    "filing_date": "03/12/2024",
+    "hearing_date": null,
+    "court_room": null,
+    "plaintiff_name": "Family Trust Federal Credit Union",
+    "plaintiff_attorney": {
+      "name": "Jordan Daniel Beumer",
+      "phone": "(803) 252-3340",
+      "email": "",
+      "firm": ""
+    },
+    "defendant_first_name": "Rose",
+    "defendant_last_name": "Ann Carter",
+    "defendant_attorney": {
+      "name": "Robert Julian Thomas Jr.",
+      "phone": "(803) 898-5271",
+      "email": "",
+      "firm": ""
+    },
+    "property_address": {
+      "street": "263 Echo Lane",
+      "city": "Rock Hill",
+      "state": "SC",
+      "zip_code": ""
+    },
+    "scraped_at": "2025-12-07 09:05:29.310764",
+    "source_url": "https://publicindex.sccourts.org/york/courtrosters/RosterDetails.aspx?CourtAgency=46003&RosterID=272&RosterCode=SALE "
+  },
+  {
+    "case_number": "2025CP4600768",
+    "case_type": "Foreclosure",
+    "filing_date": "02/21/2025",
+    "hearing_date": null,
+    "court_room": null,
+    "plaintiff_name": "Bank Of York",
+    "plaintiff_attorney": {
+      "name": "Kyle Aaron Brannon",
+      "phone": "(803) 540-2168",
+      "email": "",
+      "firm": ""
+    },
+    "defendant_first_name": "Bluecore",
+    "defendant_last_name": "Industries Inc",
+    "defendant_attorney": {
+      "name": "",
+      "phone": "",
+      "email": "",
+      "firm": ""
+    },
+    "property_address": {
+      "street": "350 Marion Street",
+      "city": "Rock Hill",
+      "state": "SC",
+      "zip_code": ""
+    },
+    "scraped_at": "2025-12-07 09:05:29.312325",
+    "source_url": "https://publicindex.sccourts.org/york/courtrosters/RosterDetails.aspx?CourtAgency=46003&RosterID=272&RosterCode=SALE "
+  },
+  {
+    "case_number": "2025CP4600875",
+    "case_type": "Foreclosure",
+    "filing_date": "02/27/2025",
+    "hearing_date": null,
+    "court_room": null,
+    "plaintiff_name": "Loandepotcom Llc",
+    "plaintiff_attorney": {
+      "name": "Kevin Ted Brown",
+      "phone": "(803) 454-3540",
+      "email": "",
+      "firm": ""
+    },
+    "defendant_first_name": "Terry",
+    "defendant_last_name": "Catoe",
+    "defendant_attorney": {
+      "name": "Kelley Yarborough Woody",
+      "phone": "(803) 787-9678",
+      "email": "",
+      "firm": ""
+    },
+    "property_address": {
+      "street": "4024 Redwood Drive",
+      "city": "Rock Hill",
+      "state": "SC",
+      "zip_code": ""
+    },
+    "scraped_at": "2025-12-07 09:05:29.312464",
+    "source_url": "https://publicindex.sccourts.org/york/courtrosters/RosterDetails.aspx?CourtAgency=46003&RosterID=272&RosterCode=SALE "
+  },
+  {
+    "case_number": "2025CP4601093",
+    "case_type": "Foreclosure",
+    "filing_date": "03/13/2025",
+    "hearing_date": null,
+    "court_room": null,
+    "plaintiff_name": "Lakeview Loan Servicing Llc",
+    "plaintiff_attorney": {
+      "name": "J. Pamela  Price",
+      "phone": "(803) 530-7188",
+      "email": "",
+      "firm": ""
+    },
+    "defendant_first_name": "Kyle",
+    "defendant_last_name": "Farmer",
+    "defendant_attorney": {
+      "name": "Robert Julian Thomas Jr.",
+      "phone": "(803) 898-5271",
+      "email": "",
+      "firm": ""
+    },
+    "property_address": {
+      "street": "1066 Cameron Road",
+      "city": "York",
+      "state": "SC",
+      "zip_code": ""
+    },
+    "scraped_at": "2025-12-07 09:05:29.313183",
+    "source_url": "https://publicindex.sccourts.org/york/courtrosters/RosterDetails.aspx?CourtAgency=46003&RosterID=272&RosterCode=SALE "
+  },
+  {
+    "case_number": "2018CP4603623",
+    "case_type": "Foreclosure",
+    "filing_date": "04/23/2019",
+    "hearing_date": null,
+    "court_room": null,
+    "plaintiff_name": "Jpmorgan Chase Bank National Association",
+    "plaintiff_attorney": {
+      "name": "Angelia Jacquline Grant",
+      "phone": "(803) 252-3340",
+      "email": "",
+      "firm": ""
+    },
+    "defendant_first_name": "Terry",
+    "defendant_last_name": "Sanders",
+    "defendant_attorney": {
+      "name": "Kiera Courtney Dillon",
+      "phone": "(803) 898-5213",
+      "email": "",
+      "firm": ""
+    },
+    "property_address": {
+      "street": "757 Jones Branch Drive",
+      "city": "Fort Mill",
+      "state": "SC",
+      "zip_code": ""
+    },
+    "scraped_at": "2025-12-07 09:06:00.490888",
+    "source_url": "https://publicindex.sccourts.org/york/courtrosters/RosterDetails.aspx?CourtAgency=46003&RosterID=273&RosterCode=SALE "
+  },
+  {
+    "case_number": "2025CP4601197",
+    "case_type": "Foreclosure",
+    "filing_date": "03/21/2025",
+    "hearing_date": null,
+    "court_room": null,
+    "plaintiff_name": "Pennymac Loan Services Llc",
+    "plaintiff_attorney": {
+      "name": "Kevin Ted Brown",
+      "phone": "(803) 454-3540",
+      "email": "",
+      "firm": ""
+    },
+    "defendant_first_name": "Kenneth",
+    "defendant_last_name": "Roach",
+    "defendant_attorney": {
+      "name": "",
+      "phone": "",
+      "email": "",
+      "firm": ""
+    },
+    "property_address": {
+      "street": "875 Rolling Green Drive",
+      "city": "Rock Hill",
+      "state": "SC",
+      "zip_code": ""
+    },
+    "scraped_at": "2025-12-07 09:06:00.491113",
+    "source_url": "https://publicindex.sccourts.org/york/courtrosters/RosterDetails.aspx?CourtAgency=46003&RosterID=273&RosterCode=SALE "
+  },
+  {
+    "case_number": "2025CP4601051",
+    "case_type": "Foreclosure",
+    "filing_date": "03/12/2025",
+    "hearing_date": null,
+    "court_room": null,
+    "plaintiff_name": "Us Bank Trust Company National Association Not In Its , plaintiff, et al",
+    "plaintiff_attorney": {
+      "name": "Sarah Oliver Leonard",
+      "phone": "(803) 726-2700",
+      "email": "",
+      "firm": ""
+    },
+    "defendant_first_name": "Tru",
+    "defendant_last_name": "Llc",
+    "defendant_attorney": {
+      "name": "",
+      "phone": "",
+      "email": "",
+      "firm": ""
+    },
+    "property_address": {
+      "street": "517 South Spruce Street",
+      "city": "Rock Hill",
+      "state": "SC",
+      "zip_code": ""
+    },
+    "scraped_at": "2025-12-07 09:06:28.035340",
+    "source_url": "https://publicindex.sccourts.org/york/courtrosters/RosterDetails.aspx?CourtAgency=46003&RosterID=274&RosterCode=DEFI "
+  }
+]

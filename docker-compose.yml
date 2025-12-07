@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  scraper:
+    build: .
+    volumes:
+      - ./data:/app/data
+      - ./screenshots:/app/screenshots
+    environment:
+      - PYTHONUNBUFFERED=1
+      - SCHEDULE_INTERVAL_DAYS=14
+      - REQUESTS_PER_SECOND=0.5
+    command: ["--format", "csv"]
+
+  scheduler:
+    build: .
+    volumes:
+      - ./data:/app/data
+      - ./screenshots:/app/screenshots
+    environment:
+      - PYTHONUNBUFFERED=1
+      - SCHEDULE_INTERVAL_DAYS=14
+    entrypoint: ["python", "scheduler.py"]
+    command: ["--interval", "14"]
+    restart: unless-stopped

@@ -19,8 +19,9 @@ env/
 data/*.db
 data/*.csv
 data/*.xlsx
-data/*.json
 data/logs/
+# Keep sample JSON for documentation
+!data/sample_foreclosures.json
 
 # Screenshots (temporary)
 screenshots/
