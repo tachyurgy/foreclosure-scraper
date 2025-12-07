@@ -1,21 +1,44 @@
 # Foreclosure Data Scraper
 
-A production-ready web scraping system that extracts foreclosure case data from South Carolina county court rosters, enriches it with property data from Zillow, and finds related deals on Dealio.
+**Extracting foreclosure data from court systems that don't want to be scraped.**
 
-## What It Does
+I built this to solve a specific problem: a client needed pending foreclosure case data from South Carolina county courts, enriched with property valuations from Zillow. The catch? The court system actively blocks automated access.
 
-This scraper tackles a real-world data extraction challenge: pulling pending foreclosure case information from government court systems that actively block automated access. The extracted data includes:
+This repo documents my approach to bypassing those protections and building a reliable, production-grade data pipeline.
 
-- **Case Details**: Case numbers, filing dates, case status
-- **Party Information**: Plaintiff names, defendant names
-- **Attorney Contacts**: Names and phone numbers for both plaintiff and defendant attorneys
-- **Property Addresses**: Full street addresses parsed and normalized
-- **Property Values**: Zillow estimates, pricing data (when available)
-- **Deal Information**: Related offers from Dealio
+---
 
-### Sample Output
+## The Problem
 
-Here's actual data extracted from York County, SC court rosters:
+Government court websites increasingly deploy sophisticated anti-bot measures. The SC Courts public index was returning `406 Not Acceptable` errors to every automated tool I tried:
+
+| Approach | Result |
+|----------|--------|
+| Playwright (headless) | ❌ 406 error |
+| Playwright (headed) | ❌ 406 error |
+| Selenium + undetected-chromedriver | ❌ 406 error |
+| playwright-stealth | ❌ 406 error |
+| Custom headers + cookies | ❌ 406 error |
+
+The site wasn't checking JavaScript execution or header patterns. It was fingerprinting TLS handshakes.
+
+## The Solution
+
+Standard scraping libraries have distinctive TLS fingerprints that differ from real browsers. The fix: **TLS fingerprint impersonation** using `curl_cffi` (via `stealth-requests`), which replicates Chrome's exact TLS handshake.
+
+Combined with human-like behavior patterns:
+- Random 10-30 second delays between requests
+- Proper session management and cookie handling
+- Sequential form submissions matching real browser flow
+- Realistic referrer chains
+
+**Result:** Full access to the data.
+
+---
+
+## Live Output
+
+Real data extracted from York County, SC Master's Sales rosters:
 
 ```
 Case: 2024CP4601055
@@ -33,191 +56,228 @@ Case: 2025CP4600875
   Defendant Attorney: Kelley Yarborough Woody - (803) 787-9678
   Property: 4024 Redwood Drive, Rock Hill, SC
   Filing Date: 02/27/2025
+
+Case: 2025CP4601197
+  Plaintiff: Pennymac Loan Services Llc
+  Defendant: Kenneth Roach
+  Plaintiff Attorney: Kevin Ted Brown - (803) 454-3540
+  Property: 875 Rolling Green Drive, Rock Hill, SC
+  Filing Date: 03/21/2025
 ```
 
-## The Technical Challenge
+Each case includes: case number, both party names, attorney names and direct phone numbers, property address, and filing date.
 
-Government court websites often employ aggressive anti-bot measures. The SC Courts public index, for example, returns `406 Not Acceptable` responses to standard scraping tools—including headless browsers with stealth plugins.
-
-After testing multiple approaches:
-- Standard Playwright/Puppeteer ❌
-- Selenium with undetected-chromedriver ❌
-- Various stealth plugins ❌
-- Custom header manipulation ❌
-
-The solution that worked: **TLS fingerprint impersonation** using `stealth-requests` (built on `curl_cffi`). This library mimics the exact TLS handshake of real browsers, bypassing fingerprint-based detection.
-
-Combined with:
-- Human-like request timing (10-30 second random delays)
-- Proper session/cookie handling
-- Realistic HTTP header patterns
-- Sequential form submissions matching browser behavior
+---
 
 ## Architecture
 
 ```
-┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
-│   County Court  │────▶│  Stealth Scraper │────▶│   Data Models   │
-│   (Step A)      │     │  (TLS Bypass)    │     │   (Pydantic)    │
-└─────────────────┘     └──────────────────┘     └────────┬────────┘
-                                                          │
-┌─────────────────┐     ┌──────────────────┐              │
-│     Zillow      │◀────│ Property Lookup  │◀─────────────┤
-│   (Step B)      │     │  (Playwright)    │              │
-└─────────────────┘     └──────────────────┘              │
-                                                          │
-┌─────────────────┐     ┌──────────────────┐              │
-│     Dealio      │◀────│  Deal Lookup     │◀─────────────┘
-│   (Step C)      │     │  (Playwright)    │
-└─────────────────┘     └──────────────────┘
-                                │
-                                ▼
-                        ┌──────────────────┐
-                        │  SQLite + Export │
-                        │  (CSV/Excel/JSON)│
-                        └──────────────────┘
+                    ┌─────────────────────────────────────┐
+                    │         Data Pipeline               │
+                    └─────────────────────────────────────┘
+                                     │
+        ┌────────────────────────────┼────────────────────────────┐
+        │                            │                            │
+        ▼                            ▼                            ▼
+┌───────────────┐          ┌───────────────┐          ┌───────────────┐
+│  STEP A       │          │  STEP B       │          │  STEP C       │
+│  County Court │          │  Zillow       │          │  Dealio       │
+│  Rosters      │          │  Lookup       │          │  Lookup       │
+├───────────────┤          ├───────────────┤          ├───────────────┤
+│ stealth-      │          │ Playwright    │          │ Playwright    │
+│ requests      │          │ + delays      │          │ + delays      │
+│ (TLS bypass)  │          │               │          │               │
+└───────┬───────┘          └───────┬───────┘          └───────┬───────┘
+        │                          │                          │
+        └──────────────────────────┴──────────────────────────┘
+                                   │
+                                   ▼
+                    ┌─────────────────────────────────────┐
+                    │  Pydantic Models → SQLite → Export  │
+                    │       (CSV / Excel / JSON)          │
+                    └─────────────────────────────────────┘
 ```
+
+**Step A** feeds addresses to Steps B and C. All data flows through validated Pydantic models into SQLite, with export to your preferred format.
+
+---
 
 ## Quick Start
 
-### Using Docker
+### Docker (Recommended)
 
 ```bash
-# Build the image
 docker build -t foreclosure-scraper .
-
-# Run a single extraction
-docker run -v $(pwd)/data:/app/data foreclosure-scraper
-
-# Or use docker-compose for scheduled runs
-docker-compose up scheduler
+docker run -v $(pwd)/data:/app/data foreclosure-scraper --format csv
 ```
 
-### Local Installation
+### Local
 
 ```bash
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # or `venv\Scripts\activate` on Windows
-
-# Install dependencies
+python -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
-
-# Install Playwright browsers
 playwright install chromium
-
-# Run the scraper
 python main.py --format csv
 ```
 
+---
+
+## Scheduling
+
+The scraper supports automated periodic runs:
+
+```bash
+# Run every 14 days (default)
+python scheduler.py
+
+# Run once immediately
+python scheduler.py --once
+
+# Custom interval
+python scheduler.py --interval 7
+```
+
+Or use docker-compose:
+
+```bash
+docker-compose up scheduler  # Runs on schedule
+docker-compose up scraper    # Runs once
+```
+
+---
+
 ## Configuration
 
-Environment variables or edit `config.py`:
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `SCHEDULE_INTERVAL_DAYS` | 14 | Days between scheduled runs |
-| `REQUESTS_PER_SECOND` | 1.0 | Rate limiting for requests |
-
-### Target Configuration
-
-The scraper currently targets York County, SC. Modify `config.py` to change:
+Key settings in `config.py` or via environment variables:
 
 ```python
-@dataclass
-class CountyConfig:
-    base_url: str = "https://publicindex.sccourts.org/york/courtrosters/"
-    case_types: list[str] = field(default_factory=lambda: ["Foreclosure"])
+# Target county
+base_url = "https://publicindex.sccourts.org/york/courtrosters/"
+
+# Zillow search area
+target_zip_codes = ["29732", "29745", "29730", "29710", ...]
+
+# Rate limiting
+requests_per_second = 1.0
+schedule_interval_days = 14
 ```
 
-### Zillow ZIP Codes
-
-```python
-target_zip_codes: list[str] = field(default_factory=lambda: [
-    "29732", "29745", "29730", "29710", "29708",
-    "29704", "29726", "29717", "29715", "29702",
-    "29743", "29712"
-])
-```
+---
 
 ## Project Structure
 
 ```
-foreclosure-scraper/
-├── main.py                 # Main orchestrator
-├── scheduler.py            # Periodic execution
-├── config.py               # Configuration settings
-├── models.py               # Pydantic data models
-├── storage.py              # Database and export
+├── main.py                           # Orchestrator
+├── scheduler.py                      # Cron-style runner
+├── config.py                         # All configuration
+├── models.py                         # Pydantic schemas
+├── storage.py                        # SQLite + export
 ├── scrapers/
-│   ├── base.py             # Base scraper class
-│   ├── county_scraper.py   # Playwright-based county scraper
-│   ├── stealth_scraper.py  # Stealth Playwright variant
-│   ├── stealth_requests_scraper.py  # TLS fingerprint bypass
-│   ├── zillow_scraper.py   # Property data lookup
-│   └── dealio_scraper.py   # Deal/offer lookup
-├── data/                   # Output directory
+│   ├── base.py                       # Abstract base
+│   ├── stealth_requests_scraper.py   # TLS fingerprint bypass ← the magic
+│   ├── stealth_scraper.py            # Playwright + human simulation
+│   ├── county_scraper.py             # Standard Playwright
+│   ├── zillow_scraper.py             # Property lookups
+│   └── dealio_scraper.py             # Deal lookups
+├── data/                             # Output directory
 ├── Dockerfile
-├── docker-compose.yml
-└── requirements.txt
+└── docker-compose.yml
 ```
 
-## Data Export
+---
 
-Extracted data is automatically saved to SQLite and can be exported to:
+## Technical Details
 
-- **CSV**: `python main.py --format csv`
-- **Excel**: `python main.py --format xlsx`
-- **JSON**: `python main.py --format json`
+### Why TLS Fingerprinting Matters
 
-Output files are timestamped and saved to the `data/` directory.
+Modern WAFs (Web Application Firewalls) fingerprint the TLS handshake—the cipher suites offered, their order, supported extensions, etc. Python's `requests` and even headless browsers have fingerprints that differ from real Chrome/Firefox.
 
-## Scheduling
+`curl_cffi` solves this by using libcurl compiled to match browser fingerprints exactly. The `stealth-requests` wrapper makes it drop-in compatible with the `requests` API.
 
-For periodic extraction (default: every 2 weeks):
+### Human Behavior Simulation
 
-```bash
-# Run the scheduler
-python scheduler.py
+Beyond TLS, the scraper implements:
 
-# Or run once without scheduling
-python scheduler.py --once
+- **Random delays**: 10-30 seconds between page loads (configurable)
+- **Session continuity**: Proper cookie jar management across requests
+- **Referrer chains**: Each request includes correct referrer from previous page
+- **Form handling**: ASP.NET ViewState and EventValidation properly submitted
 
-# Custom interval
-python scheduler.py --interval 7  # Weekly
+### Data Validation
+
+All extracted data passes through Pydantic models:
+
+```python
+class ForeclosureCase(BaseModel):
+    case_number: str
+    plaintiff_name: str
+    defendant_first_name: str
+    defendant_last_name: str
+    plaintiff_attorney: Attorney
+    defendant_attorney: Attorney
+    property_address: Address
+    filing_date: Optional[str]
+    # ...
 ```
 
-## Key Dependencies
+Malformed data fails fast with clear errors rather than polluting your database.
 
-- **stealth-requests**: TLS fingerprint impersonation via curl_cffi
-- **playwright**: Browser automation for JavaScript-heavy sites
-- **beautifulsoup4/lxml**: HTML parsing
-- **pydantic**: Data validation and serialization
-- **sqlalchemy**: Database ORM
-- **pandas**: Data manipulation and export
-- **rich**: Terminal output formatting
-- **loguru**: Logging
+---
 
-## Extending to Other Counties
+## Extending to Other Courts
 
-The modular architecture makes it straightforward to add new court systems:
+The architecture is designed for this. To add a new county:
 
-1. Create a new scraper in `scrapers/` inheriting from `BaseScraper`
-2. Implement the `scrape()` method for the target site's structure
-3. Update `config.py` with the new court's URL and settings
-4. The data models and export pipeline work automatically
+1. Create `scrapers/new_county_scraper.py` inheriting from `BaseScraper`
+2. Implement `scrape()` for that site's HTML structure
+3. Add config entry in `config.py`
+4. The rest (models, storage, export) works automatically
 
-## Notes on Anti-Bot Measures
+Different anti-bot measures? The `stealth_requests_scraper.py` pattern adapts to most TLS-fingerprinting sites. For JS-heavy sites, the Playwright-based scrapers with human simulation usually work.
 
-Different sites require different approaches:
+---
 
-| Site | Challenge | Solution |
-|------|-----------|----------|
-| SC Courts | TLS fingerprinting | stealth-requests with curl_cffi |
-| Zillow | Rate limiting, JS rendering | Playwright with delays |
-| Dealio | Standard protection | Standard requests with headers |
+## Dependencies
 
-The key insight: modern anti-bot systems often rely more on TLS fingerprints than on JavaScript execution or header analysis. When standard tools fail, TLS-level impersonation is worth trying.
+| Package | Purpose |
+|---------|---------|
+| `stealth-requests` | TLS fingerprint impersonation |
+| `playwright` | Browser automation |
+| `beautifulsoup4` / `lxml` | HTML parsing |
+| `pydantic` | Data validation |
+| `sqlalchemy` | Database ORM |
+| `pandas` | Export formatting |
+| `rich` | Terminal UI |
+| `loguru` | Logging |
+| `apscheduler` | Scheduling |
+
+---
+
+## Sample Data
+
+Check `data/sample_foreclosures.json` for actual extracted records. The scraper successfully pulls:
+
+- ✅ Case numbers (SC format: 2024CP4601055)
+- ✅ Plaintiff names (banks, lenders, servicers)
+- ✅ Defendant names
+- ✅ Plaintiff attorney names and phone numbers
+- ✅ Defendant attorney names and phone numbers
+- ✅ Property addresses (parsed into street/city/state/zip)
+- ✅ Filing dates
+
+---
+
+## What I Learned
+
+1. **TLS fingerprinting is the new frontier** for anti-bot. Header manipulation and JS execution won't help if your TLS handshake screams "Python script."
+
+2. **Patience pays off**. The 10-30 second delays feel slow, but they're what separate working scrapers from blocked ones.
+
+3. **ASP.NET sites are predictable**. Once you understand ViewState and EventValidation, the form handling is mechanical.
+
+4. **Government sites are worth the effort**. The data is public record, often not available in bulk anywhere else, and valuable to the right clients.
+
+---
 
 ## License
 
@@ -225,4 +285,4 @@ MIT
 
 ---
 
-*Built to solve a real data extraction problem. If you have a similar challenge, feel free to reach out.*
+**Questions about scraping a similar site? I'm available for consulting and contract work.**
