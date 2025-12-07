@@ -37,3 +37,5 @@ htmlcov/
 
 # Internal docs
 plan.txt
+web/node_modules/
+web/dist/

@@ -84,15 +84,74 @@ class DataStorage:
         Base.metadata.create_all(self.engine)
         self.Session = sessionmaker(bind=self.engine)
 
-    def save_records(self, records: list[ForeclosureRecord]) -> int:
+    def _generate_dedup_key(self, record: ForeclosureRecord) -> str:
+        """Generate a deduplication key based on property address and defendant.
+
+        This helps identify duplicate records even if case numbers differ.
+        """
+        addr = record.case.property_address
+        normalized_street = addr.street.lower().strip() if addr.street else ""
+        normalized_city = addr.city.lower().strip() if addr.city else ""
+        defendant = record.case.defendant_full_name.lower().strip()
+
+        return f"{normalized_street}|{normalized_city}|{defendant}"
+
+    def deduplicate_records(self, records: list[ForeclosureRecord]) -> list[ForeclosureRecord]:
+        """Remove duplicate records, keeping the most recently scraped.
+
+        Deduplication is based on:
+        1. Case number (exact match)
+        2. Property address + defendant name (fuzzy match)
+        """
+        seen_case_numbers = set()
+        seen_dedup_keys = set()
+        unique_records = []
+
+        # Sort by scraped_at descending to keep newest
+        sorted_records = sorted(
+            records,
+            key=lambda r: r.case.scraped_at,
+            reverse=True
+        )
+
+        for record in sorted_records:
+            case_num = record.case.case_number
+            dedup_key = self._generate_dedup_key(record)
+
+            # Skip if we've seen this case number
+            if case_num in seen_case_numbers:
+                logger.debug(f"Skipping duplicate case number: {case_num}")
+                continue
+
+            # Skip if we've seen this address+defendant combo
+            if dedup_key and dedup_key in seen_dedup_keys:
+                logger.debug(f"Skipping duplicate property/defendant: {dedup_key}")
+                continue
+
+            seen_case_numbers.add(case_num)
+            if dedup_key:
+                seen_dedup_keys.add(dedup_key)
+            unique_records.append(record)
+
+        removed = len(records) - len(unique_records)
+        if removed > 0:
+            logger.info(f"Deduplicated: removed {removed} duplicate records")
+
+        return unique_records
+
+    def save_records(self, records: list[ForeclosureRecord], deduplicate: bool = True) -> int:
         """Save foreclosure records to database.
 
         Args:
             records: List of ForeclosureRecord objects
+            deduplicate: Whether to remove duplicates before saving
 
         Returns:
             Number of records saved/updated
         """
+        if deduplicate:
+            records = self.deduplicate_records(records)
+
         session = self.Session()
         saved_count = 0
 

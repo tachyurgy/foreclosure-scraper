@@ -2,6 +2,12 @@
 
 **Extracting foreclosure data from court systems that don't want to be scraped.**
 
+## [View Live Demo](https://tachyurgy.github.io/foreclosure-scraper/)
+
+[![Live Demo](https://img.shields.io/badge/demo-live-brightgreen)](https://tachyurgy.github.io/foreclosure-scraper/)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 I built this to solve a specific problem: a client needed pending foreclosure case data from South Carolina county courts, enriched with property valuations from Zillow. The catch? The court system actively blocks automated access.
 
 This repo documents my approach to bypassing those protections and building a reliable, production-grade data pipeline.
@@ -66,6 +72,27 @@ Case: 2025CP4601197
 ```
 
 Each case includes: case number, both party names, attorney names and direct phone numbers, property address, and filing date.
+
+---
+
+## Web Viewer
+
+The project includes a modern **Preact-based web application** for viewing foreclosure data:
+
+- Real-time filtering by city and search
+- Property valuation estimates based on York County market data
+- Attorney contact information for both parties
+- Mobile-responsive design with dark theme
+
+**[Launch the Web Viewer](https://tachyurgy.github.io/foreclosure-scraper/)**
+
+To run locally:
+
+```bash
+cd web
+npm install
+npm run dev
+```
 
 ---
 
@@ -168,18 +195,28 @@ schedule_interval_days = 14
 
 ```
 ├── main.py                           # Orchestrator
+├── run_pipeline.py                   # Full pipeline with rich logging
 ├── scheduler.py                      # Cron-style runner
 ├── config.py                         # All configuration
 ├── models.py                         # Pydantic schemas
-├── storage.py                        # SQLite + export
+├── storage.py                        # SQLite + export + deduplication
 ├── scrapers/
 │   ├── base.py                       # Abstract base
-│   ├── stealth_requests_scraper.py   # TLS fingerprint bypass ← the magic
+│   ├── stealth_requests_scraper.py   # TLS fingerprint bypass (the magic)
 │   ├── stealth_scraper.py            # Playwright + human simulation
 │   ├── county_scraper.py             # Standard Playwright
 │   ├── zillow_scraper.py             # Property lookups
 │   └── dealio_scraper.py             # Deal lookups
+├── web/                              # Preact web viewer
+│   ├── src/
+│   │   ├── App.jsx                   # Main component
+│   │   └── style.css                 # Dark theme styling
+│   ├── package.json
+│   └── vite.config.js
 ├── data/                             # Output directory
+│   ├── foreclosures_enriched.json    # Latest enriched data
+│   └── logs/                         # Pipeline logs
+├── docs/                             # GitHub Pages deployment
 ├── Dockerfile
 └── docker-compose.yml
 ```
