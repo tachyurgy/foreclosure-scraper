@@ -94,31 +94,6 @@ class ZillowProperty(BaseModel):
     scraped_at: datetime = Field(default_factory=datetime.now)
 
 
-class DealioListing(BaseModel):
-    """Dealio listing data."""
-
-    address: str = ""
-    title: str = ""
-    description: str = ""
-
-    # Pricing and deals
-    price: Optional[float] = None
-    original_price: Optional[float] = None
-    discount_percent: Optional[float] = None
-    offer_description: str = ""
-
-    # Contact info
-    contact_phone: str = ""
-    contact_email: str = ""
-    contact_name: str = ""
-
-    # URLs
-    listing_url: str = ""
-
-    # Metadata
-    scraped_at: datetime = Field(default_factory=datetime.now)
-
-
 class ForeclosureRecord(BaseModel):
     """Complete foreclosure record combining all data sources."""
 
@@ -127,7 +102,6 @@ class ForeclosureRecord(BaseModel):
 
     # Enriched data from other sources
     zillow_data: Optional[ZillowProperty] = None
-    dealio_data: Optional[DealioListing] = None
 
     # Processing metadata
     processed_at: datetime = Field(default_factory=datetime.now)
@@ -178,16 +152,6 @@ class ForeclosureRecord(BaseModel):
                 "zillow_year_built": self.zillow_data.year_built,
                 "zillow_status": self.zillow_data.status,
                 "zillow_url": self.zillow_data.listing_url,
-            })
-
-        # Add Dealio data if available
-        if self.dealio_data:
-            data.update({
-                "dealio_price": self.dealio_data.price,
-                "dealio_offer": self.dealio_data.offer_description,
-                "dealio_contact_phone": self.dealio_data.contact_phone,
-                "dealio_contact_email": self.dealio_data.contact_email,
-                "dealio_url": self.dealio_data.listing_url,
             })
 
         return data

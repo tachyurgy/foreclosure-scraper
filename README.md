@@ -103,29 +103,29 @@ npm run dev
                     │         Data Pipeline               │
                     └─────────────────────────────────────┘
                                      │
-        ┌────────────────────────────┼────────────────────────────┐
-        │                            │                            │
-        ▼                            ▼                            ▼
-┌───────────────┐          ┌───────────────┐          ┌───────────────┐
-│  STEP A       │          │  STEP B       │          │  STEP C       │
-│  County Court │          │  Zillow       │          │  Dealio       │
-│  Rosters      │          │  Lookup       │          │  Lookup       │
-├───────────────┤          ├───────────────┤          ├───────────────┤
-│ stealth-      │          │ Playwright    │          │ Playwright    │
-│ requests      │          │ + delays      │          │ + delays      │
-│ (TLS bypass)  │          │               │          │               │
-└───────┬───────┘          └───────┬───────┘          └───────┬───────┘
-        │                          │                          │
-        └──────────────────────────┴──────────────────────────┘
-                                   │
-                                   ▼
+        ┌────────────────────────────┴────────────────────────────┐
+        │                                                         │
+        ▼                                                         ▼
+┌───────────────┐                                       ┌───────────────┐
+│  STEP A       │                                       │  STEP B       │
+│  County Court │                                       │  Zillow       │
+│  Rosters      │                                       │  Lookup       │
+├───────────────┤                                       ├───────────────┤
+│ stealth-      │                                       │ Playwright    │
+│ requests      │                                       │ + delays      │
+│ (TLS bypass)  │                                       │               │
+└───────┬───────┘                                       └───────┬───────┘
+        │                                                       │
+        └───────────────────────────┬───────────────────────────┘
+                                    │
+                                    ▼
                     ┌─────────────────────────────────────┐
                     │  Pydantic Models → SQLite → Export  │
                     │       (CSV / Excel / JSON)          │
                     └─────────────────────────────────────┘
 ```
 
-**Step A** feeds addresses to Steps B and C. All data flows through validated Pydantic models into SQLite, with export to your preferred format.
+**Step A** feeds addresses to Step B. All data flows through validated Pydantic models into SQLite, with export to your preferred format.
 
 ---
 
@@ -205,8 +205,7 @@ schedule_interval_days = 14
 │   ├── stealth_requests_scraper.py   # TLS fingerprint bypass (the magic)
 │   ├── stealth_scraper.py            # Playwright + human simulation
 │   ├── county_scraper.py             # Standard Playwright
-│   ├── zillow_scraper.py             # Property lookups
-│   └── dealio_scraper.py             # Deal lookups
+│   └── zillow_scraper.py             # Property lookups
 ├── web/                              # Preact web viewer
 │   ├── src/
 │   │   ├── App.jsx                   # Main component

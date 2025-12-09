@@ -58,13 +58,6 @@ class ForeclosureTable(Base):
     zillow_status = Column(String(50))
     zillow_url = Column(Text)
 
-    # Dealio data
-    dealio_price = Column(Float, nullable=True)
-    dealio_offer = Column(Text)
-    dealio_contact_phone = Column(String(50))
-    dealio_contact_email = Column(String(100))
-    dealio_url = Column(Text)
-
     # Metadata
     source_url = Column(Text)
     scraped_at = Column(DateTime, default=datetime.now)

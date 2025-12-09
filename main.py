@@ -4,8 +4,7 @@
 This script coordinates the multi-step data extraction process:
 1. Step A: Scrape York County court rosters for foreclosure cases
 2. Step B: Look up property data on Zillow using addresses from Step A
-3. Step C: Look up deals on Dealio using addresses from Step A
-4. Export combined data to CSV/Excel/JSON
+3. Export combined data to CSV/Excel/JSON
 """
 
 import asyncio
@@ -20,7 +19,7 @@ from rich.table import Table
 
 from config import config
 from models import ForeclosureCase, ForeclosureRecord
-from scrapers import CountyCourtScraper, ZillowScraper, DealioScraper
+from scrapers import CountyCourtScraper, ZillowScraper
 from storage import DataStorage
 
 # Configure logging
@@ -47,13 +46,11 @@ class ForeclosurePipeline:
         self.storage = DataStorage()
         self.county_scraper = CountyCourtScraper()
         self.zillow_scraper = ZillowScraper()
-        self.dealio_scraper = DealioScraper()
 
     async def close(self):
         """Close all scrapers."""
         await self.county_scraper.close()
         await self.zillow_scraper.close()
-        await self.dealio_scraper.close()
 
     async def run_step_a(self) -> list[ForeclosureCase]:
         """Step A: Scrape York County court rosters for foreclosure cases."""
@@ -114,57 +111,10 @@ class ForeclosurePipeline:
 
         return results
 
-    async def run_step_c(self, cases: list[ForeclosureCase]) -> dict[str, any]:
-        """Step C: Look up properties on Dealio."""
-        console.print("\n[bold blue]Step C: Looking up properties on Dealio[/bold blue]")
-
-        results = {}
-
-        if not cases:
-            console.print("[yellow]⚠ No cases to look up[/yellow]")
-            return results
-
-        addresses = [case.property_address for case in cases if case.property_address.street]
-
-        if not addresses:
-            console.print("[yellow]⚠ No valid addresses found in cases[/yellow]")
-            return results
-
-        with Progress(
-            SpinnerColumn(),
-            TextColumn("[progress.description]{task.description}"),
-            BarColumn(),
-            TaskProgressColumn(),
-            console=console,
-        ) as progress:
-            task = progress.add_task("Looking up on Dealio...", total=len(addresses))
-
-            for case in cases:
-                if not case.property_address.street:
-                    progress.advance(task)
-                    continue
-
-                try:
-                    dealio_data = await self.dealio_scraper.lookup_property(
-                        case.property_address
-                    )
-                    results[case.case_number] = dealio_data
-                except Exception as e:
-                    logger.debug(f"Dealio lookup failed for {case.case_number}: {e}")
-                    results[case.case_number] = None
-
-                progress.advance(task)
-
-        found_count = sum(1 for v in results.values() if v)
-        console.print(f"[green]✓ Found Dealio data for {found_count}/{len(cases)} properties[/green]")
-
-        return results
-
     def combine_results(
         self,
         cases: list[ForeclosureCase],
         zillow_data: dict,
-        dealio_data: dict,
     ) -> list[ForeclosureRecord]:
         """Combine all data sources into complete records."""
         records = []
@@ -173,7 +123,6 @@ class ForeclosurePipeline:
             record = ForeclosureRecord(
                 case=case,
                 zillow_data=zillow_data.get(case.case_number),
-                dealio_data=dealio_data.get(case.case_number),
             )
             records.append(record)
 
@@ -202,12 +151,9 @@ class ForeclosurePipeline:
             # Step B: Enrich with Zillow data
             zillow_data = await self.run_step_b(cases)
 
-            # Step C: Enrich with Dealio data
-            dealio_data = await self.run_step_c(cases)
-
             # Combine all results
             console.print("\n[bold blue]Combining results...[/bold blue]")
-            records = self.combine_results(cases, zillow_data, dealio_data)
+            records = self.combine_results(cases, zillow_data)
 
             # Save to database
             console.print("\n[bold blue]Saving to database...[/bold blue]")
@@ -240,10 +186,6 @@ class ForeclosurePipeline:
             str(sum(1 for r in records if r.zillow_data))
         )
         table.add_row(
-            "With Dealio Data",
-            str(sum(1 for r in records if r.dealio_data))
-        )
-        table.add_row(
             "With Property Address",
             str(sum(1 for r in records if r.case.property_address.street))
         )
@@ -274,7 +216,7 @@ async def main():
     )
     parser.add_argument(
         "--step",
-        choices=["a", "b", "c", "all"],
+        choices=["a", "b", "all"],
         default="all",
         help="Run specific step or all (default: all)",
     )

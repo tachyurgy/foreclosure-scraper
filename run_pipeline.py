@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
 """
-Full pipeline test runner - scrapes real data from all three sources.
+Full pipeline test runner - scrapes real data from county courts and Zillow.
 
 This script:
 1. Step A: Scrapes York County court rosters for foreclosure cases (using stealth-requests)
 2. Step B: Enriches each property with Zillow data (using Playwright)
-3. Step C: Enriches each property with Dealio data (using Playwright)
-4. Combines, deduplicates, and exports to JSON/CSV
+3. Combines, deduplicates, and exports to JSON/CSV
 
 Run with: python run_pipeline.py
 """
@@ -58,7 +57,6 @@ def print_banner():
 ║                                                               ║
 ║     Step A: County Court Rosters (stealth-requests)           ║
 ║     Step B: Zillow Property Lookup (Playwright)               ║
-║     Step C: Dealio Deal Lookup (Playwright)                   ║
 ╚═══════════════════════════════════════════════════════════════╝
     """
     console.print(Panel(banner, style="bold blue"))
@@ -124,9 +122,9 @@ async def run_step_a() -> list:
 
 
 async def run_step_b(cases: list) -> dict:
-    """Step B: Look up properties on Zillow."""
+    """Step B: Look up properties on Zillow using nodriver."""
     console.print("\n[bold yellow]═══ STEP B: Zillow Property Lookup ═══[/bold yellow]")
-    console.print("[dim]Using Playwright with browser automation[/dim]\n")
+    console.print("[dim]Using nodriver for undetected browser automation[/dim]\n")
 
     if not cases:
         console.print("[yellow]⚠ No cases to look up[/yellow]")
@@ -135,44 +133,43 @@ async def run_step_b(cases: list) -> dict:
     results = {}
 
     try:
-        from scrapers.zillow_scraper import ZillowScraper
+        from scrapers.zillow_nodriver import ZillowNodriverScraper, NODRIVER_AVAILABLE
 
-        scraper = ZillowScraper()
+        if not NODRIVER_AVAILABLE:
+            console.print("[red]ERROR: nodriver not available. Install with: pip install nodriver[/red]")
+            return {}
+
+        scraper = ZillowNodriverScraper()
 
         # Filter cases with valid addresses
         valid_cases = [c for c in cases if c.property_address.street]
         console.print(f"[dim]Looking up {len(valid_cases)} properties with valid addresses[/dim]\n")
 
-        with Progress(
-            SpinnerColumn(),
-            TextColumn("[progress.description]{task.description}"),
-            BarColumn(),
-            TaskProgressColumn(),
-            TimeElapsedColumn(),
-            console=console,
-        ) as progress:
-            task = progress.add_task("Zillow lookups...", total=len(valid_cases))
+        for i, case in enumerate(valid_cases):
+            address = case.property_address.full_address
+            console.print(f"[{i+1}/{len(valid_cases)}] Looking up: {case.property_address.street}...")
+            logger.info(f"Zillow lookup: {address}")
 
-            for case in valid_cases:
-                address = case.property_address.full_address
-                logger.info(f"Zillow lookup: {address}")
+            try:
+                zillow_data = await scraper.lookup_property(case.property_address)
 
-                try:
-                    progress.update(task, description=f"Looking up: {case.property_address.street[:25]}...")
-                    zillow_data = await scraper.lookup_property(case.property_address)
-
-                    if zillow_data:
-                        results[case.case_number] = zillow_data
-                        logger.info(f"  ✓ Found: ${zillow_data.price:,.0f}" if zillow_data.price else "  ✓ Found (no price)")
-                    else:
-                        results[case.case_number] = None
-                        logger.info("  ✗ Not found")
-
-                except Exception as e:
-                    logger.warning(f"Zillow lookup failed for {address}: {e}")
+                if zillow_data and (zillow_data.price or zillow_data.sqft):
+                    results[case.case_number] = zillow_data
+                    price_str = f"${zillow_data.price:,.0f}" if zillow_data.price else "N/A"
+                    console.print(f"  [green]✓ Found: {price_str}, {zillow_data.bedrooms}bd/{zillow_data.bathrooms}ba, {zillow_data.sqft} sqft[/green]")
+                    logger.info(f"  ✓ Found: {price_str}")
+                else:
                     results[case.case_number] = None
+                    console.print(f"  [yellow]✗ Not found[/yellow]")
+                    logger.info("  ✗ Not found")
 
-                progress.advance(task)
+            except Exception as e:
+                logger.warning(f"Zillow lookup failed for {address}: {e}")
+                console.print(f"  [red]✗ Error: {e}[/red]")
+                results[case.case_number] = None
+
+            # Brief delay between lookups
+            await asyncio.sleep(2)
 
         await scraper.close()
 
@@ -191,74 +188,7 @@ async def run_step_b(cases: list) -> dict:
         return {}
 
 
-async def run_step_c(cases: list) -> dict:
-    """Step C: Look up properties on Dealio."""
-    console.print("\n[bold yellow]═══ STEP C: Dealio Deal Lookup ═══[/bold yellow]")
-    console.print("[dim]Using Playwright with browser automation[/dim]\n")
-
-    if not cases:
-        console.print("[yellow]⚠ No cases to look up[/yellow]")
-        return {}
-
-    results = {}
-
-    try:
-        from scrapers.dealio_scraper import DealioScraper
-
-        scraper = DealioScraper()
-
-        valid_cases = [c for c in cases if c.property_address.street]
-        console.print(f"[dim]Looking up {len(valid_cases)} properties for deals[/dim]\n")
-
-        with Progress(
-            SpinnerColumn(),
-            TextColumn("[progress.description]{task.description}"),
-            BarColumn(),
-            TaskProgressColumn(),
-            TimeElapsedColumn(),
-            console=console,
-        ) as progress:
-            task = progress.add_task("Dealio lookups...", total=len(valid_cases))
-
-            for case in valid_cases:
-                address = case.property_address.full_address
-                logger.info(f"Dealio lookup: {address}")
-
-                try:
-                    progress.update(task, description=f"Looking up: {case.property_address.street[:25]}...")
-                    dealio_data = await scraper.lookup_property(case.property_address)
-
-                    if dealio_data:
-                        results[case.case_number] = dealio_data
-                        logger.info(f"  ✓ Found deal: {dealio_data.offer_description[:50] if dealio_data.offer_description else 'N/A'}")
-                    else:
-                        results[case.case_number] = None
-                        logger.info("  ✗ No deals found")
-
-                except Exception as e:
-                    logger.warning(f"Dealio lookup failed for {address}: {e}")
-                    results[case.case_number] = None
-
-                progress.advance(task)
-
-        await scraper.close()
-
-        found_count = sum(1 for v in results.values() if v)
-        console.print(f"\n[green]✓ Dealio data found for {found_count}/{len(valid_cases)} properties[/green]")
-
-        return results
-
-    except ImportError as e:
-        console.print(f"[red]Import error: {e}[/red]")
-        logger.exception("Import error in Step C")
-        return {}
-    except Exception as e:
-        console.print(f"[red]Error in Step C: {e}[/red]")
-        logger.exception("Step C failed")
-        return {}
-
-
-def combine_and_export(cases: list, zillow_data: dict, dealio_data: dict) -> Path:
+def combine_and_export(cases: list, zillow_data: dict) -> Path:
     """Combine all data and export to JSON."""
     console.print("\n[bold yellow]═══ COMBINING & EXPORTING DATA ═══[/bold yellow]\n")
 
@@ -315,20 +245,6 @@ def combine_and_export(cases: list, zillow_data: dict, dealio_data: dict) -> Pat
                 "zillow_image_url": zdata.image_url,
             })
 
-        # Add Dealio data
-        ddata = dealio_data.get(case.case_number)
-        if ddata:
-            record.update({
-                "dealio_price": ddata.price,
-                "dealio_original_price": ddata.original_price,
-                "dealio_discount_percent": ddata.discount_percent,
-                "dealio_offer": ddata.offer_description,
-                "dealio_contact_phone": ddata.contact_phone,
-                "dealio_contact_email": ddata.contact_email,
-                "dealio_contact_name": ddata.contact_name,
-                "dealio_url": ddata.listing_url,
-            })
-
         combined_records.append(record)
 
     # Deduplicate by case number
@@ -363,7 +279,7 @@ def combine_and_export(cases: list, zillow_data: dict, dealio_data: dict) -> Pat
     return json_path
 
 
-def print_summary(cases: list, zillow_data: dict, dealio_data: dict):
+def print_summary(cases: list, zillow_data: dict):
     """Print final summary."""
     console.print("\n[bold yellow]═══ PIPELINE SUMMARY ═══[/bold yellow]\n")
 
@@ -374,14 +290,6 @@ def print_summary(cases: list, zillow_data: dict, dealio_data: dict):
     table.add_row("Total Cases Scraped", str(len(cases)))
     table.add_row("With Property Address", str(sum(1 for c in cases if c.property_address.street)))
     table.add_row("With Zillow Data", str(sum(1 for v in zillow_data.values() if v)))
-    table.add_row("With Dealio Data", str(sum(1 for v in dealio_data.values() if v)))
-
-    # Fully enriched (has both Zillow and Dealio)
-    fully_enriched = sum(
-        1 for c in cases
-        if zillow_data.get(c.case_number) and dealio_data.get(c.case_number)
-    )
-    table.add_row("Fully Enriched (Both Sources)", str(fully_enriched))
 
     console.print(table)
 
@@ -413,14 +321,11 @@ async def main():
     # Step B: Zillow enrichment
     zillow_data = await run_step_b(cases)
 
-    # Step C: Dealio enrichment
-    dealio_data = await run_step_c(cases)
-
     # Combine and export
-    output_path = combine_and_export(cases, zillow_data, dealio_data)
+    output_path = combine_and_export(cases, zillow_data)
 
     # Print summary
-    print_summary(cases, zillow_data, dealio_data)
+    print_summary(cases, zillow_data)
 
     console.print(f"\n[bold green]Pipeline complete![/bold green]")
     console.print(f"[dim]Finished at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}[/dim]")

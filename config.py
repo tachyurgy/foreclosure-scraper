@@ -54,13 +54,6 @@ class ZillowConfig:
 
 
 @dataclass
-class DealioConfig:
-    """Configuration for Dealio lookups."""
-
-    base_url: str = "https://www.dealio.com"
-
-
-@dataclass
 class StorageConfig:
     """Configuration for data storage."""
 
@@ -79,7 +72,6 @@ class AppConfig:
     scraper: ScraperConfig = field(default_factory=ScraperConfig)
     county: CountyConfig = field(default_factory=CountyConfig)
     zillow: ZillowConfig = field(default_factory=ZillowConfig)
-    dealio: DealioConfig = field(default_factory=DealioConfig)
     storage: StorageConfig = field(default_factory=StorageConfig)
 
     # Scheduling
