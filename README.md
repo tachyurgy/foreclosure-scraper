@@ -227,7 +227,7 @@ schedule_interval_days = 14
 ├── data/                             # Output directory
 │   ├── foreclosures_enriched.json    # Latest enriched data
 │   └── logs/                         # Pipeline logs
-├── docs/                             # GitHub Pages deployment
+├── .github/workflows/deploy.yml      # GitHub Pages deployment (builds web/)
 ├── Dockerfile
 └── docker-compose.yml
 ```
