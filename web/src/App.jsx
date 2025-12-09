@@ -1,186 +1,6 @@
-import { useState, useMemo } from 'preact/hooks'
+import { useState, useMemo, useEffect } from 'preact/hooks'
 
-// Real foreclosure data scraped from York County SC Court System
-// Enriched with Zillow estimates based on York County market data
-const foreclosureData = [
-  {
-    case_number: "2024CP4601055",
-    case_type: "Foreclosure",
-    filing_date: "03/12/2024",
-    hearing_date: "01/15/2025",
-    plaintiff_name: "Family Trust Federal Credit Union",
-    plaintiff_attorney_name: "Jordan Daniel Beumer",
-    plaintiff_attorney_phone: "(803) 252-3340",
-    defendant_first_name: "Rose",
-    defendant_last_name: "Ann Carter",
-    defendant_full_name: "Rose Ann Carter",
-    defendant_attorney_name: "Robert Julian Thomas Jr.",
-    defendant_attorney_phone: "(803) 898-5271",
-    property_street: "263 Echo Lane",
-    property_city: "Rock Hill",
-    property_state: "SC",
-    property_zip: "29732",
-    source_url: "https://publicindex.sccourts.org/york/courtrosters/",
-    scraped_at: "2025-12-07T11:22:01",
-    // Zillow estimates based on Rock Hill market data
-    zillow_estimate: 189000,
-    zillow_bedrooms: 3,
-    zillow_bathrooms: 2,
-    zillow_sqft: 1450,
-    zillow_year_built: 1998
-  },
-  {
-    case_number: "2025CP4600768",
-    case_type: "Foreclosure",
-    filing_date: "02/21/2025",
-    hearing_date: "03/28/2025",
-    plaintiff_name: "Bank Of York",
-    plaintiff_attorney_name: "Kyle Aaron Brannon",
-    plaintiff_attorney_phone: "(803) 540-2168",
-    defendant_first_name: "Bluecore",
-    defendant_last_name: "Industries Inc",
-    defendant_full_name: "Bluecore Industries Inc",
-    defendant_attorney_name: "",
-    defendant_attorney_phone: "",
-    property_street: "350 Marion Street",
-    property_city: "Rock Hill",
-    property_state: "SC",
-    property_zip: "29730",
-    source_url: "https://publicindex.sccourts.org/york/courtrosters/",
-    scraped_at: "2025-12-07T11:22:01",
-    zillow_estimate: 425000,
-    zillow_bedrooms: null,
-    zillow_bathrooms: null,
-    zillow_sqft: 8500,
-    zillow_year_built: 1985,
-    property_type: "Commercial"
-  },
-  {
-    case_number: "2025CP4600875",
-    case_type: "Foreclosure",
-    filing_date: "02/27/2025",
-    hearing_date: "04/10/2025",
-    plaintiff_name: "Loandepot.com LLC",
-    plaintiff_attorney_name: "Kevin Ted Brown",
-    plaintiff_attorney_phone: "(803) 454-3540",
-    defendant_first_name: "Terry",
-    defendant_last_name: "Catoe",
-    defendant_full_name: "Terry Catoe",
-    defendant_attorney_name: "Kelley Yarborough Woody",
-    defendant_attorney_phone: "(803) 787-9678",
-    property_street: "4024 Redwood Drive",
-    property_city: "Rock Hill",
-    property_state: "SC",
-    property_zip: "29732",
-    source_url: "https://publicindex.sccourts.org/york/courtrosters/",
-    scraped_at: "2025-12-07T11:22:01",
-    zillow_estimate: 267500,
-    zillow_bedrooms: 4,
-    zillow_bathrooms: 2.5,
-    zillow_sqft: 2100,
-    zillow_year_built: 2005
-  },
-  {
-    case_number: "2025CP4601093",
-    case_type: "Foreclosure",
-    filing_date: "03/13/2025",
-    hearing_date: "05/01/2025",
-    plaintiff_name: "Lakeview Loan Servicing LLC",
-    plaintiff_attorney_name: "J. Pamela Price",
-    plaintiff_attorney_phone: "(803) 530-7188",
-    defendant_first_name: "Kyle",
-    defendant_last_name: "Farmer",
-    defendant_full_name: "Kyle Farmer",
-    defendant_attorney_name: "Robert Julian Thomas Jr.",
-    defendant_attorney_phone: "(803) 898-5271",
-    property_street: "1066 Cameron Road",
-    property_city: "York",
-    property_state: "SC",
-    property_zip: "29745",
-    source_url: "https://publicindex.sccourts.org/york/courtrosters/",
-    scraped_at: "2025-12-07T11:22:01",
-    zillow_estimate: 312000,
-    zillow_bedrooms: 4,
-    zillow_bathrooms: 3,
-    zillow_sqft: 2450,
-    zillow_year_built: 2012
-  },
-  {
-    case_number: "2018CP4603623",
-    case_type: "Foreclosure",
-    filing_date: "04/23/2019",
-    hearing_date: "02/14/2025",
-    plaintiff_name: "JPMorgan Chase Bank National Association",
-    plaintiff_attorney_name: "Angelia Jacquline Grant",
-    plaintiff_attorney_phone: "(803) 252-3340",
-    defendant_first_name: "Terry",
-    defendant_last_name: "Sanders",
-    defendant_full_name: "Terry Sanders",
-    defendant_attorney_name: "Kiera Courtney Dillon",
-    defendant_attorney_phone: "(803) 898-5213",
-    property_street: "757 Jones Branch Drive",
-    property_city: "Fort Mill",
-    property_state: "SC",
-    property_zip: "29708",
-    source_url: "https://publicindex.sccourts.org/york/courtrosters/",
-    scraped_at: "2025-12-07T11:22:18",
-    zillow_estimate: 485000,
-    zillow_bedrooms: 5,
-    zillow_bathrooms: 3.5,
-    zillow_sqft: 3200,
-    zillow_year_built: 2008
-  },
-  {
-    case_number: "2025CP4601197",
-    case_type: "Foreclosure",
-    filing_date: "03/21/2025",
-    hearing_date: "05/15/2025",
-    plaintiff_name: "PennyMac Loan Services LLC",
-    plaintiff_attorney_name: "Kevin Ted Brown",
-    plaintiff_attorney_phone: "(803) 454-3540",
-    defendant_first_name: "Kenneth",
-    defendant_last_name: "Roach",
-    defendant_full_name: "Kenneth Roach",
-    defendant_attorney_name: "",
-    defendant_attorney_phone: "",
-    property_street: "875 Rolling Green Drive",
-    property_city: "Rock Hill",
-    property_state: "SC",
-    property_zip: "29730",
-    source_url: "https://publicindex.sccourts.org/york/courtrosters/",
-    scraped_at: "2025-12-07T11:22:18",
-    zillow_estimate: 225000,
-    zillow_bedrooms: 3,
-    zillow_bathrooms: 2,
-    zillow_sqft: 1680,
-    zillow_year_built: 2001
-  },
-  {
-    case_number: "2025CP4601051",
-    case_type: "Foreclosure",
-    filing_date: "03/12/2025",
-    hearing_date: "04/25/2025",
-    plaintiff_name: "US Bank Trust Company National Association",
-    plaintiff_attorney_name: "Sarah Oliver Leonard",
-    plaintiff_attorney_phone: "(803) 726-2700",
-    defendant_first_name: "TRU",
-    defendant_last_name: "LLC",
-    defendant_full_name: "TRU LLC",
-    defendant_attorney_name: "",
-    defendant_attorney_phone: "",
-    property_street: "517 South Spruce Street",
-    property_city: "Rock Hill",
-    property_state: "SC",
-    property_zip: "29730",
-    source_url: "https://publicindex.sccourts.org/york/courtrosters/",
-    scraped_at: "2025-12-07T11:22:51",
-    zillow_estimate: 145000,
-    zillow_bedrooms: 2,
-    zillow_bathrooms: 1,
-    zillow_sqft: 1100,
-    zillow_year_built: 1955
-  }
-]
+// Data is loaded dynamically from the JSON file generated by the scraper pipeline
 
 function formatCurrency(value) {
   if (!value) return 'N/A'
@@ -197,7 +17,9 @@ function formatDate(dateStr) {
 }
 
 function PropertyCard({ property }) {
-  const discountEstimate = property.zillow_estimate ? Math.round(property.zillow_estimate * 0.85) : null
+  // Use zillow_price from real data (fallback to zillow_estimate for compatibility)
+  const marketPrice = property.zillow_price || property.zillow_estimate
+  const discountEstimate = marketPrice ? Math.round(marketPrice * 0.85) : null
 
   return (
     <div className="property-card">
@@ -211,7 +33,7 @@ function PropertyCard({ property }) {
         {property.property_city}, {property.property_state} {property.property_zip}
       </div>
 
-      {property.zillow_estimate && (
+      {marketPrice && (
         <>
           <div className="property-details">
             <div className="detail">
@@ -234,8 +56,8 @@ function PropertyCard({ property }) {
               <div className="price-label">Est. Foreclosure Price (~15% below market)</div>
             </div>
             <div className="price-estimate">
-              <div className="estimate-value">{formatCurrency(property.zillow_estimate)}</div>
-              <div className="price-label">Market Estimate</div>
+              <div className="estimate-value">{formatCurrency(marketPrice)}</div>
+              <div className="price-label">Zillow Price</div>
             </div>
           </div>
         </>
@@ -281,35 +103,70 @@ function PropertyCard({ property }) {
 export function App() {
   const [searchTerm, setSearchTerm] = useState('')
   const [cityFilter, setCityFilter] = useState('all')
+  const [foreclosureData, setForeclosureData] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [lastUpdated, setLastUpdated] = useState(null)
+
+  // Load data from JSON file on mount
+  useEffect(() => {
+    fetch('./foreclosures_enriched.json')
+      .then(res => res.json())
+      .then(data => {
+        setForeclosureData(data)
+        // Get the most recent scraped_at timestamp
+        if (data.length > 0) {
+          const dates = data.map(d => d.scraped_at).filter(Boolean).sort()
+          if (dates.length > 0) {
+            setLastUpdated(new Date(dates[dates.length - 1]).toLocaleDateString())
+          }
+        }
+        setLoading(false)
+      })
+      .catch(err => {
+        console.error('Failed to load foreclosure data:', err)
+        setLoading(false)
+      })
+  }, [])
 
   const cities = useMemo(() => {
-    const uniqueCities = [...new Set(foreclosureData.map(p => p.property_city))]
+    const uniqueCities = [...new Set(foreclosureData.map(p => p.property_city).filter(Boolean))]
     return uniqueCities.sort()
-  }, [])
+  }, [foreclosureData])
 
   const filteredData = useMemo(() => {
     return foreclosureData.filter(property => {
       const matchesSearch = searchTerm === '' ||
-        property.property_street.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        property.defendant_full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        property.plaintiff_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        property.case_number.toLowerCase().includes(searchTerm.toLowerCase())
+        (property.property_street || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (property.defendant_full_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (property.plaintiff_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (property.case_number || '').toLowerCase().includes(searchTerm.toLowerCase())
 
       const matchesCity = cityFilter === 'all' || property.property_city === cityFilter
 
       return matchesSearch && matchesCity
     })
-  }, [searchTerm, cityFilter])
+  }, [searchTerm, cityFilter, foreclosureData])
 
   const totalValue = useMemo(() => {
-    return foreclosureData.reduce((sum, p) => sum + (p.zillow_estimate || 0), 0)
-  }, [])
+    return foreclosureData.reduce((sum, p) => sum + (p.zillow_price || p.zillow_estimate || 0), 0)
+  }, [foreclosureData])
+
+  if (loading) {
+    return (
+      <div className="app">
+        <header className="header">
+          <h1>York County SC Foreclosure Monitor</h1>
+          <p className="subtitle">Loading foreclosure data...</p>
+        </header>
+      </div>
+    )
+  }
 
   return (
     <div className="app">
       <header className="header">
         <h1>York County SC Foreclosure Monitor</h1>
-        <p className="subtitle">Real-time foreclosure case tracking from SC Courts Public Index</p>
+        <p className="subtitle">Live foreclosure case data scraped from SC Courts Public Index</p>
 
         <div className="stats">
           <div className="stat">
@@ -368,13 +225,13 @@ export function App() {
 
       <footer className="footer">
         <p>
-          Data sourced from <a href="https://publicindex.sccourts.org/york/courtrosters/" target="_blank" rel="noopener">SC Courts Public Index</a>
+          Data sourced from <a href="https://publicindex.sccourts.org/york/courtrosters/" target="_blank" rel="noopener">SC Courts Public Index</a> with property data from <a href="https://www.zillow.com" target="_blank" rel="noopener">Zillow</a>
         </p>
         <p>
-          Property estimates based on York County market data. Last updated: {new Date().toLocaleDateString()}
+          Data scraped using anti-bot bypass techniques (TLS fingerprinting, nodriver). Last updated: {lastUpdated || 'N/A'}
         </p>
         <p style={{ marginTop: '0.5rem' }}>
-          <a href="https://github.com/magnusfremont/foreclosure" target="_blank" rel="noopener">View Source on GitHub</a>
+          <a href="https://github.com/tachyurgy/foreclosure-scraper" target="_blank" rel="noopener">View Source on GitHub</a> — Built to demonstrate advanced web scraping techniques
         </p>
       </footer>
     </div>

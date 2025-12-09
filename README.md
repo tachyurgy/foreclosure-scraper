@@ -30,7 +30,15 @@ The site wasn't checking JavaScript execution or header patterns. It was fingerp
 
 ## The Solution
 
+This project uses two complementary anti-bot bypass techniques:
+
+### 1. TLS Fingerprint Impersonation (for SC Courts)
+
 Standard scraping libraries have distinctive TLS fingerprints that differ from real browsers. The fix: **TLS fingerprint impersonation** using `curl_cffi` (via `stealth-requests`), which replicates Chrome's exact TLS handshake.
+
+### 2. Undetected Browser Automation (for Zillow)
+
+Zillow uses sophisticated bot detection (navigator.webdriver, automation flags, headless detection). The fix: **nodriver**, which runs a real Chrome instance without any automation markers—completely indistinguishable from a human user.
 
 Combined with human-like behavior patterns:
 - Random 10-30 second delays between requests
@@ -38,7 +46,7 @@ Combined with human-like behavior patterns:
 - Sequential form submissions matching real browser flow
 - Realistic referrer chains
 
-**Result:** Full access to the data.
+**Result:** Full access to both the court data and Zillow property valuations.
 
 ---
 
@@ -202,14 +210,18 @@ schedule_interval_days = 14
 ├── storage.py                        # SQLite + export + deduplication
 ├── scrapers/
 │   ├── base.py                       # Abstract base
-│   ├── stealth_requests_scraper.py   # TLS fingerprint bypass (the magic)
+│   ├── stealth_requests_scraper.py   # TLS fingerprint bypass (curl_cffi)
 │   ├── stealth_scraper.py            # Playwright + human simulation
 │   ├── county_scraper.py             # Standard Playwright
-│   └── zillow_scraper.py             # Property lookups
+│   ├── zillow_nodriver.py            # Zillow via nodriver (undetected)
+│   ├── zillow_scraper.py             # Zillow via Playwright
+│   └── zillow_stealth.py             # Zillow via stealth-requests
 ├── web/                              # Preact web viewer
 │   ├── src/
-│   │   ├── App.jsx                   # Main component
+│   │   ├── App.jsx                   # Main component (loads live data)
 │   │   └── style.css                 # Dark theme styling
+│   ├── public/
+│   │   └── foreclosures_enriched.json # Live scraped data
 │   ├── package.json
 │   └── vite.config.js
 ├── data/                             # Output directory
@@ -229,6 +241,40 @@ schedule_interval_days = 14
 Modern WAFs (Web Application Firewalls) fingerprint the TLS handshake—the cipher suites offered, their order, supported extensions, etc. Python's `requests` and even headless browsers have fingerprints that differ from real Chrome/Firefox.
 
 `curl_cffi` solves this by using libcurl compiled to match browser fingerprints exactly. The `stealth-requests` wrapper makes it drop-in compatible with the `requests` API.
+
+### Undetected Browser Automation with nodriver
+
+For JavaScript-heavy sites like Zillow that employ sophisticated bot detection (Cloudflare, PerimeterX, DataDome), even TLS fingerprinting isn't enough. These sites detect:
+
+- WebDriver property (`navigator.webdriver`)
+- Automation flags in Chrome
+- CDP (Chrome DevTools Protocol) signatures
+- Headless browser indicators
+
+**nodriver** solves this by using a real Chrome instance without any automation markers:
+
+```python
+import nodriver as uc
+
+async def scrape_zillow():
+    browser = await uc.start()
+    tab = await browser.get("https://www.zillow.com/homes/...")
+
+    # Wait for dynamic content
+    await asyncio.sleep(3)
+
+    # Extract data from fully rendered page
+    html = await tab.get_content()
+    # ... parse property data
+```
+
+Key advantages over Selenium/Playwright:
+- **No webdriver injection**: Chrome runs without automation flags
+- **Natural fingerprint**: Indistinguishable from a real user's browser
+- **Full JS execution**: All dynamic content loads normally
+- **Persistent sessions**: Cookies and state maintained across requests
+
+This is how we extract Zillow property valuations for foreclosure addresses—something that would trigger blocks with any standard automation tool.
 
 ### Human Behavior Simulation
 
@@ -277,8 +323,9 @@ Different anti-bot measures? The `stealth_requests_scraper.py` pattern adapts to
 
 | Package | Purpose |
 |---------|---------|
-| `stealth-requests` | TLS fingerprint impersonation |
-| `playwright` | Browser automation |
+| `stealth-requests` | TLS fingerprint impersonation (curl_cffi wrapper) |
+| `nodriver` | Undetected Chrome automation for bot-protected sites |
+| `playwright` | Browser automation (fallback) |
 | `beautifulsoup4` / `lxml` | HTML parsing |
 | `pydantic` | Data validation |
 | `sqlalchemy` | Database ORM |
@@ -305,13 +352,15 @@ Check `data/sample_foreclosures.json` for actual extracted records. The scraper 
 
 ## What I Learned
 
-1. **TLS fingerprinting is the new frontier** for anti-bot. Header manipulation and JS execution won't help if your TLS handshake screams "Python script."
+1. **TLS fingerprinting is the new frontier** for anti-bot. Header manipulation and JS execution won't help if your TLS handshake screams "Python script." Use `curl_cffi` or `stealth-requests`.
 
-2. **Patience pays off**. The 10-30 second delays feel slow, but they're what separate working scrapers from blocked ones.
+2. **WebDriver detection is real**. Sites like Zillow detect `navigator.webdriver` and automation flags. `nodriver` solves this by running real Chrome without any automation markers.
 
-3. **ASP.NET sites are predictable**. Once you understand ViewState and EventValidation, the form handling is mechanical.
+3. **Patience pays off**. The 10-30 second delays feel slow, but they're what separate working scrapers from blocked ones.
 
-4. **Government sites are worth the effort**. The data is public record, often not available in bulk anywhere else, and valuable to the right clients.
+4. **ASP.NET sites are predictable**. Once you understand ViewState and EventValidation, the form handling is mechanical.
+
+5. **Government sites are worth the effort**. The data is public record, often not available in bulk anywhere else, and valuable to the right clients.
 
 ---
 
